@@ -23,7 +23,7 @@ var opts = {
   table: 'events', // name of the table to store the events
   persist: true, // defaults to true, if false, it will delete events after adding
 };
-var emitter = require('emitter-rethinkdb')(r, opts)
+var emitter = require('@paramaggarwal/emitter-rethinkdb')(r, opts)
 
 emitter.trigger('beep', 'boop')
 

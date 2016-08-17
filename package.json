@@ -1,6 +1,6 @@
 {
-  "name": "emitter-rethinkdb",
-  "version": "0.1.0",
+  "name": "@paramaggarwal/emitter-rethinkdb",
+  "version": "0.0.1",
   "homepage": "https://github.com/paramaggarwal/emitter-rethinkdb",
   "repository": {
     "type": "git",

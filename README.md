@@ -62,12 +62,13 @@ npm install @paramaggarwal/emitter-rethinkdb
 - Implement reliable restart of events in case of failure. The events are stored in the database with a `ts` timestamp added to them. Each time we receive an event, we need to keep the latest time stamp value with us. Then when we attempt to reconnect, we need to query for all events since that timestamp as follows:
 
 ```
-r.table('foo').changes({includeInitial: true}).run() // first time
-r.table('foo').between(<last>, r.max, {index: 'updatedAt'}).changes().run() // next time on reconnect, when `<last>` is the value of `updatedAt` for the last change.
+// on reconnect, where `<last>` is the value of `ts` for the last received event
+r.table('foo').between(<last>, r.max, {index: 'ts'}).changes().run() 
 ```
 
 - Automatically create configured db/table if not found when starting up. Currently, the library expects that the db/table already exists in RethinkDB.
 
+- Implement more sophisticated pub-sub exchange/topic nomenclature with inspiration from https://github.com/yamalight/rethinkdb-pubsub
 
 ## Credits
 

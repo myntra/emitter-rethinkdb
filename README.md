@@ -77,7 +77,7 @@ This library is forked from https://github.com/1N50MN14/emitter-rethinkdb to use
 
 (MIT)
 
-Copyright (c) 2014 Ayman Mackouly &lt;ayman.mackouly@gmail.com&gt;
+Copyright (c) 2016 Param Aggarwal &lt;paramaggarwal@gmail.com&gt;
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in

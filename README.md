@@ -70,6 +70,10 @@ r.table('foo').between(<last>, r.max, {index: 'ts'}).changes().run()
 
 - Implement more sophisticated pub-sub exchange/topic nomenclature with inspiration from https://github.com/yamalight/rethinkdb-pubsub
 
+## Debug
+
+Set the environment variable `DEBUG=emitter-rethinkdb` before running your application to log detailed debug events.
+
 ## Credits
 
 This library is forked from https://github.com/1N50MN14/emitter-rethinkdb to use `rethinkdbdash` which has reconnection and connection pooling built in.

@@ -1,6 +1,6 @@
 {
   "name": "@paramaggarwal/emitter-rethinkdb",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "homepage": "https://github.com/paramaggarwal/emitter-rethinkdb",
   "repository": {
     "type": "git",
@@ -20,5 +20,9 @@
     "inherits": "1.0.0",
     "node-uuid": "^1.4.7"
   },
-  "keywords": ["rethinkdb", "emitter", "events"]
+  "keywords": [
+    "rethinkdb",
+    "emitter",
+    "events"
+  ]
 }

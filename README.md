@@ -33,16 +33,16 @@ emitter.on('beep', function(d){
 
 // optional stuff
 
-emitter.on('connect', function(conn){
-  console.log('connected!')
+emitter.on('connect', function() {
+  console.log('connecting...')
 })
-.on('disconnect', function(err){
+.on('disconnect', function() {
   console.log('disconnected!')
 })
-.on('reconnect', function(number, delay){
-  console.log('reconnecting in ', delay, 'ms.', 'total retries so far is ', number)
+.on('reconnect', function() {
+  console.log('reconnecting...')
 })
-.on('error', function(err){
+.on('error', function(err) {
   console.log('error', err)
 })
 
@@ -59,14 +59,14 @@ npm install @paramaggarwal/emitter-rethinkdb
 
 ## Contribute
 
-1. Implement reliable restart of events in case of failure. The events are stored in the database with a `ts` timestamp added to them. Each time we receive an event, we need to keep the latest time stamp value with us. Then when we attempt to reconnect, we need to query for all events since that timestamp as follows:
+- Implement reliable restart of events in case of failure. The events are stored in the database with a `ts` timestamp added to them. Each time we receive an event, we need to keep the latest time stamp value with us. Then when we attempt to reconnect, we need to query for all events since that timestamp as follows:
 
 ```
 r.table('foo').changes({includeInitial: true}).run() // first time
 r.table('foo').between(<last>, r.max, {index: 'updatedAt'}).changes().run() // next time on reconnect, when `<last>` is the value of `updatedAt` for the last change.
 ```
 
-2. Automatically create configured db/table if not found when starting up. Currently, the library expects that the db/table already exists in RethinkDB.
+- Automatically create configured db/table if not found when starting up. Currently, the library expects that the db/table already exists in RethinkDB.
 
 
 ## Credits

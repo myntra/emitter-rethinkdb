@@ -18,15 +18,15 @@ emitter.on('beep', function(d){
 
 // optional stuff
 
-emitter.on('connect', function(conn){
-  console.log('connected!')
+emitter.on('connect', function() {
+  console.log('connecting...')
 })
-.on('disconnect', function(err){
+.on('disconnect', function() {
   console.log('disconnected!')
 })
-.on('reconnect', function(number, delay){
-  console.log('reconnecting in ', delay, 'ms.', 'total retries so far is ', number)
+.on('reconnect', function() {
+  console.log('reconnecting...')
 })
-.on('error', function(err){
+.on('error', function(err) {
   console.log('error', err)
 })

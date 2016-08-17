@@ -1,4 +1,3 @@
-const uuid = require('node-uuid');
 const EventEmitter = require('events').EventEmitter;
 const inherits = require('inherits');
 const async = require('async');
@@ -21,7 +20,6 @@ function Emitter(r, opts) {
   opts.table = opts.table || 'events';
   opts.persist = (typeof opts.persist === 'undefined') ? true: opts.persist;
 
-  this.id = uuid.v4();
   this.queue = async.queue(function (task, cb) {
     debug('Dequeued task', task);
 
@@ -30,7 +28,6 @@ function Emitter(r, opts) {
     .insert({
       args: task.args,
       ts: r.now(),
-      src: self.id,
     })
     .run(function(err, status) {     
       if (err) {
@@ -73,16 +70,10 @@ function Emitter(r, opts) {
           return console.log('Cursor error', err);
         }
 
-        // only inserts
         if (!data.new_val) {
           return;
         }
         
-        // ignore own event
-        if (data.new_val.src === self.id) {
-          return;
-        }
-
         debug('Received task from database', data.new_val);
         self.emit.apply(self, data.new_val.args)
       })              

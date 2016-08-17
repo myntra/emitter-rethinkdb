@@ -1,115 +1,138 @@
-var EventEmitter = require('events').EventEmitter
-var inherits = require('inherits')
-var async= require('async')
-
-module.exports = Emitter
+const uuid = require('node-uuid');
+const EventEmitter = require('events').EventEmitter;
+const inherits = require('inherits');
+const async = require('async');
+const debug = require('debug')('emitter-rethinkdb');
 
 function Emitter(r, opts) {
-	var self = this, reconnect
-	if (!(this instanceof Emitter)) return new Emitter(r, opts)
+  var self = this;
+  if (!(this instanceof Emitter)) return new Emitter(r, opts);
 
-	opts.db = opts.db || 'emitterRethinkDB'
-	opts.table = opts.table || 'emitterEvents'	
+  if (!r || !r.getPoolMaster()) {
+   throw new Error('Incorrect rethinkdbdash instance passed. let r = require(\'rethinkdbdash\')(conf)'); 
+  }
 
-	this.init = false
-	this.conn = null
-	this.queue = async.queue(function (task, cb) {		
-		r.db(opts.db).table(opts.table).insert({args:task.args}).run(self.conn, function(err, obj){   	
-			err && cb(err)			
-			r.db(opts.db).table(opts.table).get(obj.generated_keys[0]).delete().run(self.conn, function(err){
-				cb(err ? err : null)
-			})
-		})
-	}, 1)	
+  if (!opts || !opts.table || !opts.db) {
+   throw new Error('Pass in db/table pair to write events to. Make sure to configure it in DB beforehand.'); 
+  }
 
-	this.queue.pause()
+  opts = opts || {};
+  opts.db = opts.db || 'test';
+  opts.table = opts.table || 'events';
+  opts.persist = (typeof opts.persist === 'undefined') ? true: opts.persist;
 
-	reconnect = require('reconnect-rethinkdb')(r, opts)	
+  this.id = uuid.v4();
+  this.queue = async.queue(function (task, cb) {
+    debug('Dequeued task', task);
 
-	reconnect
-	.on('disconnect', function(err){
-		self.conn = null
-		self.queue.pause()
-		self.emit('disconnect', err)
-	})
-	.on('connect', function(conn){
-		self.conn = conn
-		self.emit('connect', conn)
-		_init(function(err){
-		if (err) return self.emit('error', err)
-			/* as of now rethinkdb doesn't let us know when
-			table is ready and it's time to perform operations;
-			using an ugly hack for now
-			*/
-			setTimeout(function(){
-				_listen()
-				self.queue.resume()				
-			}, 2000)			
-		})
-	})
-	.on('reconnect', function(n,d) {
-		self.emit('reconnect', n,d)
-	})
-	.on('fail', self.emit.bind(self, 'fail'))
-	.connect()
+    r.db(opts.db)
+    .table(opts.table)
+    .insert({
+      args: task.args,
+      ts: r.now(),
+      src: self.id,
+    })
+    .run(function(err, status) {     
+      if (err) {
+        return cb(err);
+      }
 
-	function _listen() {
-		var args
-		r.db(opts.db).table(opts.table).changes().run(self.conn, function(err, cursor) {			
-			if (err) return self.emit('error', err)
-			cursor.each(function(err, data) {	
-				if (!data.old_val) return		  		
-				args = data.old_val.args
-				self.emit.apply(self, args)
-			})	  			  	
-		})	
-	}
+      debug('Inserted into database', task);
+      if (opts.persist) {
+        cb(null, status);
+      } else {
+        r.db(opts.db)
+        .table(opts.table)
+        .get(status.generated_keys[0])
+        .delete()
+        .run(cb);
+      }
+    })
+  });
+  this.queue.pause();
 
-	function _init(cb) {
-		if (self.init) return cb(null)
-		_initDb(function(err){
-			if (err) return cb(err)
-			_initTable(function(err){
-				if (err) return cb(err)
-				self.init = true				
-				cb(null)
-			})
-		})
-	}
+  function connect() {
+    r.db(opts.db)
+    .table(opts.table)
+    .changes()
+    .run(function(err, cursor) {
+      if (err) {
+	    	self.emit('error', err);
+        return console.log('Error while starting changefeed', err);
+      }
 
-	function _initTable(cb) {
-		r.db(opts.db).tableList().run(self.conn, function(err, items){
-			if (err) return cb(err)				
-			if (items.indexOf(opts.table) !== -1) return cb(null)
-				r.db(opts.db).tableCreate(opts.table).run(self.conn, function(err){
-				cb(err ? err : null)
-			})
-		})
-	}
+      cursor.each(function(err, data) {
 
-	function _initDb(cb) {
-		r.dbList().run(self.conn, function(err, items) {
-			if (err) return cb(err)
-			if (items.indexOf(opts.db) !== -1) return cb(null)
-			r.dbCreate(opts.db).run(self.conn, function(err) {
-				cb(err ? err : null)
-			})	
-		})
-	}
+        if (err && !cursor.connection.open) {
+          debug('Cursor connection not open')
+          return;
+        }
+
+        if (err) {
+		    	self.emit('error', err);
+          return console.log('Cursor error', err);
+        }
+
+        // only inserts
+        if (!data.new_val) {
+          return;
+        }
+        
+        // ignore own event
+        if (data.new_val.src === self.id) {
+          return;
+        }
+
+        debug('Received task from database', data.new_val);
+        self.emit.apply(self, data.new_val.args)
+      })              
+    });
+  }
+
+  // check health by using private variable till method is exposed
+  if (r.getPoolMaster()._healthy) {
+    debug('Connecting...');
+    this.queue.resume();
+    connect();
+  	self.emit('connect');
+  }
+
+  r.getPoolMaster().on('healthy', function(healthy) {
+    if (healthy === true) {
+      debug('RethinkDB connection pool is healthy');
+      self.queue.resume();
+      connect();
+	  	self.emit('reconnect');
+    } else {
+      debug('Error: RethinkDB connection pool is not healthy');
+      self.queue.pause();
+    	self.emit('disconnect');
+    }
+  });
 }
 
 Emitter.prototype.trigger = function() {
-	var self = this
-	var args = [].slice.call(arguments)
-	if (['connect','disconnect','reconnect','fail','error'].indexOf(args[0]) !== -1)
-		throw new Error('Reserved event name')
-	this.queue.push({args:args}, function(err){
-		err && self.emit('error', err)
-	})
+  var args = [].slice.call(arguments)
+  
+  if (['connect','disconnect','reconnect','error'].indexOf(args[0]) !== -1)
+    throw new Error('Reserved event name');
+
+  debug('Adding task into queue', {args});
+  this.queue.push({
+    args: args
+  }, function(err) {
+    if (err) {
+    	self.emit('error', err);
+      return console.log('Error inserting task into database', err);
+    }
+  })
 }
 
 Emitter.prototype.kill = function() {
-	this.queue.kill()
+  this.queue.kill();
+  debug('Emitter killed');
 }
 
-inherits(Emitter, require('events').EventEmitter)
+inherits(Emitter, EventEmitter);
+
+module.exports = Emitter;

@@ -1,63 +1,77 @@
 # emitter-rethinkdb
+Simple RethinkDB-backed emitter to pass events between servers.
 
-Network event emitter based on [rethinkdb](http://www.rethinkdb.com/) with support for fibonacci backoff reconnections and event queues. Connection and reconnection is handled automatically. Events are queued when the database connection is down and drained when reconnection is established. 
+If you would like to pass events between multiple servers in a scalable environment, you can use this as a simple pub-sub mechanism backed by RethinkDB. Generally you would use `redis` for it, but you can use RethinkDB instead if you would like to have:
 
-This module relies on [change feeds](http://rethinkdb.com/api/javascript/changes/) by inserting a row into a temporary table followed by a delete operation, keeping the table empty. 
+1. Persistence of events
+2. You already have RethinkDB in your stack and would not like to add another DB.
 
-Any connected client can trigger an event, events are triggered on all connected clients.
+You can also use this library to persist a timeline of events into RethinkDB simply by emitting them.
+
+This module relies on [rethinkdbdash](https://github.com/neumino/rethinkdbdash) driver, along with the [change feeds](http://rethinkdb.com/api/javascript/changes/) feature of RethinkDB. It handles failures and reconnections, but it will not re-emit the events persisted into the DB during the down time.
+
+Any connected client can trigger an event, which then emits events on all other connected clients.
 
 ## Usage
 
 ```js
-var rethinkdb = require('rethinkdb')
-var opts = {host: 'localhost',port: 28015}
-var emitter = require('emitter-rethinkdb')(rethinkdb, opts)
+// Please create the test/events db/table pair beforehand,
+
+var r = require('rethinkdbdash')();
+var opts = {
+  db: 'test', // name of the database to store the events
+  table: 'events', // name of the table to store the events
+  persist: true, // defaults to true, if false, it will delete events after adding
+};
+var emitter = require('emitter-rethinkdb')(r, opts)
 
 emitter.trigger('beep', 'boop')
 
 emitter.on('beep', function(d){
-	console.log(d) //should log "boop"
+  console.log(d)
 })
 
-/* optional stuff
+// optional stuff
+
 emitter.on('connect', function(conn){
-	console.log('connected!')
+  console.log('connected!')
 })
 .on('disconnect', function(err){
-	console.log('disconnected!')
+  console.log('disconnected!')
 })
 .on('reconnect', function(number, delay){
-	console.log('reconnecting in ', delay, 'ms.', 'total retries so far is ', number)
-})
-.on('fail', function(){
-	console.log('given up trying to connect!')
+  console.log('reconnecting in ', delay, 'ms.', 'total retries so far is ', number)
 })
 .on('error', function(err){
-	console.log('error', err)
-})*/
+  console.log('error', err)
+})
+
+// use this to empty the events queue
+// emitter.kill()
+
 ```
-
-## Options
-Constructor accepts the same [reconnect-rethinkdb](https://github.com/1N50MN14/reconnect-rethinkdb) with an addition of the following optional options:
-
-### db
-The name of the database which holds the events table, defaults to`emitterRethinkDB`
-
-### table
-The table name to insert/delete event records, defaults to`emitterEvents`
-
-## Methods
-### trigger(evt, args[n])
-Triggers and event on call connected clients
-
-### kill()
-Empties the events queue (usefull if you wish to empty all outstanding events upon disconnection)
 
 ## Installation
 
 ```
-npm install emitter-rethinkdb
+npm install @paramaggarwal/emitter-rethinkdb
 ```
+
+## Contribute
+
+1. Implement reliable restart of events in case of failure. The events are stored in the database with a `ts` timestamp added to them. Each time we receive an event, we need to keep the latest time stamp value with us. Then when we attempt to reconnect, we need to query for all events since that timestamp as follows:
+
+```
+r.table('foo').changes({includeInitial: true}).run() // first time
+r.table('foo').between(<last>, r.max, {index: 'updatedAt'}).changes().run() // next time on reconnect, when `<last>` is the value of `updatedAt` for the last change.
+```
+
+2. Automatically create configured db/table if not found when starting up. Currently, the library expects that the db/table already exists in RethinkDB.
+
+
+## Credits
+
+This library is forked from https://github.com/1N50MN14/emitter-rethinkdb to use `rethinkdbdash` which has reconnection and connection pooling built in.
 
 ## License
 

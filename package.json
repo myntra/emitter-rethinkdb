@@ -1,27 +1,24 @@
 {
   "name": "emitter-rethinkdb",
-  "version": "0.0.2",
-  "homepage": "https://github.com/1N50MN14/emitter-rethinkdb",
+  "version": "0.1.0",
+  "homepage": "https://github.com/paramaggarwal/emitter-rethinkdb",
   "repository": {
     "type": "git",
-    "url": "git://github.com/1N50MN14/emitter-rethinkdb.git"
+    "url": "git://github.com/paramaggarwal/emitter-rethinkdb.git"
   },
-  "devDependencies": {
-    "tap": "~0.4.0"
-  },
-  "author": "ins0mnia <ayman.mackouly@gmail.com> (http://github.com/1N50MN14)",
+  "author": "Param Aggarwal <paramaggarwal@gmail.com> (http://github.com/paramaggarwal)",
   "license": "MIT",
   "readmeFilename": "README.md",
-  "description": "Network event emitter based on RethinkDB with support for automatic reconnection and event queue.",
+  "description": "Simple RethinkDB-backed emitter to pass events between servers.",
   "main": "index.js",
   "directories": {
     "test": "test"
   },
-  "dependencies": {    
-    "inherits": "1.0.0",
+  "dependencies": {
     "async": "0.9.0",
-    "reconnect-rethinkdb": "0.0.2"
-
+    "debug": "^2.2.0",
+    "inherits": "1.0.0",
+    "node-uuid": "^1.4.7"
   },
-  "keywords": ["rethinkdb", "emitter", "events", "reconnect-rethinkdb"]
+  "keywords": ["rethinkdb", "emitter", "events"]
 }

@@ -66,8 +66,6 @@ npm install @paramaggarwal/emitter-rethinkdb
 r.table('foo').between(<last>, r.max, {index: 'ts'}).changes().run() 
 ```
 
-- Automatically create configured db/table if not found when starting up. Currently, the library expects that the db/table already exists in RethinkDB.
-
 - Implement more sophisticated pub-sub exchange/topic nomenclature with inspiration from https://github.com/yamalight/rethinkdb-pubsub
 
 ## Debug
